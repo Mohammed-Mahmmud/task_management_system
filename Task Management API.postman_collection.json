@@ -170,6 +170,26 @@
 					"response": []
 				},
 				{
+					"name": "Get Project Statuses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/projects/statuses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"projects",
+								"statuses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Create Project",
 					"event": [
 						{
@@ -301,6 +321,46 @@
 								"projects",
 								"{{project_id}}",
 								"tasks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Priorities",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/tasks/priorities",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tasks",
+								"priorities"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task Statuses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/tasks/statuses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"tasks",
+								"statuses"
 							]
 						}
 					},
