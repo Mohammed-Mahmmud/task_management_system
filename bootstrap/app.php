@@ -3,6 +3,7 @@
 use App\Exceptions\ProjectNotFoundException;
 use App\Exceptions\TaskNotFoundException;
 use App\Exceptions\UnauthorizedException;
+use App\Http\Middleware\JsonAuthenticationMiddleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,7 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'api.auth' => JsonAuthenticationMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

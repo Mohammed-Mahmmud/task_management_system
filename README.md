@@ -128,7 +128,19 @@ DELETE /api/v1/tasks/{id}       (soft delete)
 
 Query params for tasks: `status` (todo / in_progress / done), `priority` (low / medium / high), `search`.
 
-**Full docs:** import `Task Management API.postman_collection.json` and `.postman_environment.json` into Postman. Start with the Authentication folder — the token is saved automatically for subsequent requests.
+## API Documentation
+
+Complete API documentation is available via **Swagger/OpenAPI**:
+
+**Access the interactive API documentation:**
+- **Swagger UI**: http://localhost:8000/api/documentation
+
+### Features:
+- ✅ Interactive API explorer - test endpoints directly from your browser
+- ✅ Complete request/response examples
+- ✅ Authentication flow included
+- ✅ Auto-generated from code annotations
+- ✅ No Postman required
 
 ## Testing
 

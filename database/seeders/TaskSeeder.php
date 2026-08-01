@@ -13,21 +13,23 @@ class TaskSeeder extends Seeder
         $projects = Project::all();
 
         foreach ($projects as $project) {
-            Task::factory(rand(5, 10))->create([
-                'project_id' => $project->id,
-            ]);
+            if ($project->tasks()->count() === 0) {
+                Task::factory(rand(5, 10))->create([
+                    'project_id' => $project->id,
+                ]);
 
-            Task::factory(rand(1, 3))->overdue()->create([
-                'project_id' => $project->id,
-            ]);
+                Task::factory(rand(1, 3))->overdue()->create([
+                    'project_id' => $project->id,
+                ]);
 
-            Task::factory(rand(2, 4))->completed()->create([
-                'project_id' => $project->id,
-            ]);
+                Task::factory(rand(2, 4))->completed()->create([
+                    'project_id' => $project->id,
+                ]);
 
-            Task::factory(rand(2, 3))->pending()->create([
-                'project_id' => $project->id,
-            ]);
+                Task::factory(rand(2, 3))->pending()->create([
+                    'project_id' => $project->id,
+                ]);
+            }
         }
     }
 }

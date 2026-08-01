@@ -9,8 +9,6 @@ use App\Http\Requests\Task\StoreTaskRequest;
 use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Http\Traits\ApiResponse;
-use App\Models\Project;
-use App\Models\Task;
 use App\Services\ProjectService;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;

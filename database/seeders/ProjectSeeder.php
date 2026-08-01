@@ -13,9 +13,11 @@ class ProjectSeeder extends Seeder
         $users = User::all();
 
         foreach ($users as $user) {
-            Project::factory(rand(3, 5))->create([
-                'user_id' => $user->id,
-            ]);
+            if ($user->projects()->count() === 0) {
+                Project::factory(rand(3, 5))->create([
+                    'user_id' => $user->id,
+                ]);
+            }
         }
     }
 }
