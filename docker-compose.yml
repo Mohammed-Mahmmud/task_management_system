@@ -54,7 +54,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
 
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot", "--ssl-mode=DISABLED"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_password", "--ssl-mode=DISABLED"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -78,7 +78,7 @@ services:
       PMA_HOST: mysql
       PMA_PORT: 3306
       PMA_USER: root
-      PMA_PASSWORD: root
+      PMA_PASSWORD: root_password
 
     depends_on:
       mysql:
@@ -90,9 +90,25 @@ services:
     networks:
       - laravel_network
 
+  redis:
+    image: redis:7-alpine
+
+    container_name: laravel_redis
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    networks:
+      - laravel_network
+
 networks:
   laravel_network:
     driver: bridge
 
 volumes:
   mysql_data:
+  redis_data:
