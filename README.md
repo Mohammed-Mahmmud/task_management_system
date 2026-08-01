@@ -1,59 +1,356 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Task Management API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A professional RESTful API built with Laravel 13 for managing projects and tasks with full authentication, authorization, and notification features.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Authentication & Authorization**: Laravel Sanctum token-based authentication
+- **Project Management**: Full CRUD operations for projects with status tracking
+- **Task Management**: Comprehensive task management with priorities, statuses, and due dates
+- **Dashboard**: Aggregate statistics and metrics
+- **Filtering & Search**: Advanced filtering by status, priority, and search by title
+- **Notifications**: Email and database notifications for overdue tasks
+- **Soft Deletes**: Soft delete support for projects and tasks
+- **API Documentation**: Complete Postman collection included
+- **Testing**: Comprehensive Pest test suite
+- **Docker Support**: Fully containerized with Docker Compose
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technology Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Framework**: Laravel 13
+- **PHP**: 8.3
+- **Database**: MySQL 8.0
+- **Authentication**: Laravel Sanctum
+- **Queue**: Database driver
+- **Testing**: Pest
+- **Containerization**: Docker & Docker Compose
 
-## Learning Laravel
+## Project Architecture
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Domain Models
+- **Users**: Application users with authentication
+- **Projects**: User-owned projects with status tracking (Active, Completed, Archived)
+- **Tasks**: Project tasks with priorities (Low, Medium, High) and statuses (Todo, In Progress, Done)
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Architecture Patterns
+- **Repository Pattern**: Abstraction layer for data access
+- **Service Layer**: Business logic encapsulation
+- **Resource Pattern**: API response transformation
+- **Policy-Based Authorization**: Laravel policies for access control
+- **Observer Pattern**: Event-driven notifications
+- **Enum Pattern**: Type-safe status and priority values
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### Key Components
+- Eloquent ORM with relationships
+- Custom exception handling
+- API response standardization via traits
+- Database seeding with factories
+- Email notifications for overdue tasks
+- Database notifications
+- Soft delete cascade on project deletion
 
-## Agentic Development
+## Installation
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### Prerequisites
+- Docker Desktop installed and running
+- Git
 
+### Setup Steps
+
+1. **Clone the repository**
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone <repository-url>
+cd task_management_system
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+2. **Copy environment file**
+```bash
+copy .env.docker .env
+```
 
-## Contributing
+3. **Start Docker containers**
+```bash
+docker compose up -d --build
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. **Install dependencies**
+```bash
+docker compose exec app composer install
+```
 
-## Code of Conduct
+5. **Generate application key**
+```bash
+docker compose exec app php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+6. **Run migrations**
+```bash
+docker compose exec app php artisan migrate
+```
 
-## Security Vulnerabilities
+7. **Seed database** (optional)
+```bash
+docker compose exec app php artisan db:seed
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Access Points
+
+- **API Base URL**: http://localhost:8000
+- **phpMyAdmin**: http://localhost:8080 (user: root, password: root_password)
+- **MySQL**: localhost:3306 (user: laravel_user, password: laravel_password)
+
+## API Endpoints
+
+### Authentication
+- `POST /api/v1/register` - Register new user
+- `POST /api/v1/login` - Login user
+- `POST /api/v1/logout` - Logout user (requires authentication)
+
+### Dashboard
+- `GET /api/v1/dashboard` - Get dashboard statistics (requires authentication)
+
+### Projects
+- `GET /api/v1/projects` - List all projects (paginated)
+- `POST /api/v1/projects` - Create new project
+- `GET /api/v1/projects/{id}` - Get single project
+- `PUT /api/v1/projects/{id}` - Update project
+- `DELETE /api/v1/projects/{id}` - Delete project (soft delete)
+
+### Tasks
+- `GET /api/v1/projects/{project}/tasks` - List project tasks (paginated)
+- `POST /api/v1/projects/{project}/tasks` - Create new task
+- `GET /api/v1/tasks/{id}` - Get single task
+- `PUT /api/v1/tasks/{id}` - Update task
+- `DELETE /api/v1/tasks/{id}` - Delete task (soft delete)
+
+### Query Parameters for Tasks
+- `status`: Filter by status (todo, in_progress, done)
+- `priority`: Filter by priority (low, medium, high)
+- `search`: Search by title
+
+## API Documentation
+
+Use the included **Postman collection** for complete API documentation:
+
+1. Import `Task Management API.postman_collection.json` into Postman
+2. Import `Task Management API.postman_environment.json` for environment variables
+3. Start with the Authentication folder to get your API token
+4. The token is automatically saved for subsequent requests
+
+## Testing
+
+### Run all tests
+```bash
+docker compose exec app php artisan test
+```
+
+### Run specific test suite
+```bash
+docker compose exec app php artisan test --filter AuthenticationTest
+docker compose exec app php artisan test --filter ProjectTest
+docker compose exec app php artisan test --filter TaskTest
+docker compose exec app php artisan test --filter DashboardTest
+```
+
+### Test Coverage
+- Authentication tests (register, login, logout)
+- Project CRUD tests with authorization
+- Task CRUD tests with filtering
+- Dashboard statistics tests
+- Validation and error handling tests
+
+## Database Seeding
+
+The application includes comprehensive seeders:
+
+```bash
+docker compose exec app php artisan db:seed
+```
+
+This creates:
+- 3 users (admin@example.com, test@example.com, demo@example.com)
+- 3-5 projects per user
+- 5-10 tasks per project with varied statuses and priorities
+- Includes overdue, completed, and pending tasks
+
+Default password for seeded users: `password`
+
+## Queue Workers
+
+For processing email notifications:
+
+```bash
+docker compose exec app php artisan queue:work
+```
+
+Or use the `--daemon` flag for production:
+
+```bash
+docker compose exec app php artisan queue:work --daemon
+```
+
+## Development Commands
+
+### Clear caches
+```bash
+docker compose exec app php artisan cache:clear
+docker compose exec app php artisan config:clear
+docker compose exec app php artisan route:clear
+```
+
+### Generate IDE helper files
+```bash
+docker compose exec app composer require --dev barryvdh/laravel-ide-helper
+docker compose exec app php artisan ide-helper:generate
+docker compose exec app php artisan ide-helper:models
+```
+
+### Code formatting
+```bash
+docker compose exec app ./vendor/bin/pint
+```
+
+## Docker Management
+
+### View logs
+```bash
+docker compose logs -f app
+```
+
+### Access container shell
+```bash
+docker compose exec app bash
+```
+
+### Stop containers
+```bash
+docker compose down
+```
+
+### Rebuild containers
+```bash
+docker compose up -d --build
+```
+
+## Project Structure
+
+```
+app/
+├── Enums/                    # PHP 8 enum classes
+├── Exceptions/               # Custom exceptions
+├── Http/
+│   ├── Controllers/
+│   │   └── Api/V1/          # API controllers
+│   ├── Requests/            # Form request validators
+│   ├── Resources/           # API resources
+│   └── Traits/              # Reusable traits (ApiResponse)
+├── Jobs/                    # Queue jobs
+├── Mail/                    # Mailable classes
+├── Models/                  # Eloquent models
+├── Notifications/           # Notification classes
+├── Observers/               # Eloquent observers
+├── Policies/                # Authorization policies
+├── Providers/               # Service providers
+├── Repositories/
+│   ├── Contracts/          # Repository interfaces
+│   └── Eloquent/           # Repository implementations
+└── Services/                # Business logic services
+
+database/
+├── factories/               # Model factories
+├── migrations/              # Database migrations
+└── seeders/                 # Database seeders
+
+tests/
+├── Feature/
+│   ├── Api/V1/             # API feature tests
+│   └── Auth/               # Authentication tests
+└── Unit/                    # Unit tests
+```
+
+## API Response Format
+
+### Success Response
+```json
+{
+    "success": true,
+    "message": "Operation successful",
+    "data": { }
+}
+```
+
+### Error Response
+```json
+{
+    "success": false,
+    "message": "Error message",
+    "errors": { }
+}
+```
+
+### Paginated Response
+```json
+{
+    "success": true,
+    "message": "Data retrieved successfully",
+    "data": {
+        "data": [],
+        "links": {
+            "first": "...",
+            "last": "...",
+            "prev": null,
+            "next": "..."
+        },
+        "meta": {
+            "current_page": 1,
+            "from": 1,
+            "last_page": 5,
+            "per_page": 15,
+            "to": 15,
+            "total": 65
+        }
+    }
+}
+```
+
+## Environment Variables
+
+Key environment variables (see `.env.example` for complete list):
+
+```env
+APP_NAME=Laravel
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=laravel_user
+DB_PASSWORD=laravel_password
+
+QUEUE_CONNECTION=database
+CACHE_STORE=database
+
+MAIL_MAILER=log
+```
+
+## Security Features
+
+- Token-based authentication (Laravel Sanctum)
+- Password hashing with bcrypt
+- Policy-based authorization
+- Input validation
+- SQL injection protection via Eloquent ORM
+- XSS protection
+- CSRF protection
+- Rate limiting
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# task_management_system
+This project is open-sourced software licensed under the MIT license.
+
+## Support
+
+For issues or questions, please open an issue in the repository.
