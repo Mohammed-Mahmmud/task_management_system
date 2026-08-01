@@ -326,9 +326,9 @@ APP_URL=http://localhost:8000
 DB_CONNECTION=mysql
 DB_HOST=mysql
 DB_PORT=3306
-DB_DATABASE=laravel
-DB_USERNAME=laravel_user
-DB_PASSWORD=laravel_password
+DB_DATABASE=task_management_db
+DB_USERNAME=root
+DB_PASSWORD=root
 
 QUEUE_CONNECTION=database
 CACHE_STORE=database
