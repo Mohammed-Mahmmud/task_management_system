@@ -65,44 +65,25 @@ git clone <repository-url>
 cd task_management_system
 ```
 
-2. **Copy environment file**
+2. **Environment Setup**
 ```bash
-copy .env.docker .env
+copy .env.example .env
 ```
+> **Important**: Copy `.env.example` to `.env` before starting. The file contains all necessary configuration for Docker services (MySQL, Mailpit, etc.).
 
 3. **Start Docker containers**
 ```bash
 docker compose up -d --build
 ```
 
-This single command starts all required services:
-- **app**: Laravel application server
-- **mysql**: Database server
-- **phpmyadmin**: Database management interface
-- **queue**: Background queue worker for processing jobs
-- **scheduler**: Task scheduler that runs every minute
+This single command automatically:
+- ✅ Builds and starts all Docker containers (app, mysql, queue, scheduler, mailpit, phpmyadmin)
+- ✅ Installs Composer dependencies
+- ✅ Generates application key
+- ✅ Runs database migrations
+- ✅ Seeds the database with sample data
 
-**No manual queue or scheduler commands are needed!** Everything runs automatically.
-
-4. **Install dependencies**
-```bash
-docker compose exec app composer install
-```
-
-5. **Generate application key**
-```bash
-docker compose exec app php artisan key:generate
-```
-
-6. **Run migrations**
-```bash
-docker compose exec app php artisan migrate
-```
-
-7. **Seed database** (optional)
-```bash
-docker compose exec app php artisan db:seed
-```
+**That's it!** Everything is automated. No manual commands needed.
 
 ## Access Points
 
@@ -262,7 +243,7 @@ MAIL_PASSWORD=your-password
 The system automatically sends email notifications for overdue tasks:
 
 ### How It Works
-1. **Scheduler**: Runs daily at 00:05 (5 minutes after midnight)
+1. **Scheduler**: Runs daily at 09:05 (9:05 AM)
 2. **Detection**: Identifies tasks where:
    - `due_date` is before today
    - `status` is NOT "Done"
@@ -278,6 +259,31 @@ To manually trigger the overdue notification check:
 ```bash
 docker compose exec app php artisan tasks:notify-overdue
 ```
+
+### **Testing with Mailpit - Quick Email Testing**
+
+> **💡 For rapid testing of email notifications**, you can temporarily change the schedule frequency in `routes/console.php`:
+
+**Production schedule (default):**
+```php
+Schedule::command('tasks:notify-overdue')
+    ->dailyAt('09:05')
+    // ->everyMinute()  // only for mailpit testing
+    ->withoutOverlapping();
+```
+
+**For testing (uncomment `everyMinute()`):**
+```php
+Schedule::command('tasks:notify-overdue')
+    // ->dailyAt('09:05')
+    ->everyMinute()  // only for mailpit testing
+    ->withoutOverlapping();
+```
+
+⚠️ **Important**: 
+- Change it to `->everyMinute()` only for testing email notifications in Mailpit
+- **Always revert back** to `->dailyAt('09:05')` after testing
+- The scheduler runs automatically in the `scheduler` Docker container
 
 ### Architecture
 - **Command**: `tasks:notify-overdue` (app/Console/Commands/NotifyOverdueTasks.php)

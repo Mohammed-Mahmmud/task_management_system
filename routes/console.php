@@ -9,5 +9,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('tasks:notify-overdue')
-    ->dailyAt('00:05')
+    ->dailyAt('09:05') 
+    // ->everyMinute()  // only for mailpit testing 
     ->withoutOverlapping();
