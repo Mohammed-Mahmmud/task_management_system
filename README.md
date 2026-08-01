@@ -1,468 +1,228 @@
 # Task Management API
 
-A professional RESTful API built with Laravel 13 for managing projects and tasks with full authentication, authorization, and notification features.
+A professional RESTful API built with **Laravel 13** for managing projects and tasks, with full authentication, authorization, and automated notifications.
 
 ## Features
 
-- **Authentication & Authorization**: Laravel Sanctum token-based authentication
-- **Project Management**: Full CRUD operations for projects with status tracking
-- **Task Management**: Comprehensive task management with priorities, statuses, and due dates
-- **Dashboard**: Aggregate statistics and metrics
-- **Filtering & Search**: Advanced filtering by status, priority, and search by title
-- **Automated Overdue Notifications**: Time-based email notifications for overdue tasks
-- **Soft Deletes**: Soft delete support for projects and tasks
-- **API Documentation**: Complete Postman collection included
-- **Testing**: Comprehensive Pest test suite
-- **Docker Support**: Fully containerized with Docker Compose (app, queue worker, scheduler)
+- **Authentication & Authorization** — Laravel Sanctum token-based auth, policy-based access control
+- **Project & Task Management** — Full CRUD with status tracking, priorities, and due dates
+- **Dashboard** — Aggregate statistics and metrics
+- **Filtering & Search** — By status, priority, and title
+- **Automated Overdue Notifications** — Scheduled, queued email notifications (one-time per task)
+- **Soft Deletes** — Cascading soft delete on projects and tasks
+- **Fully Dockerized** — App, queue worker, scheduler, database, and mail testing, all containerized
+- **Tested** — Comprehensive Pest test suite
+- **Documented** — Complete Postman collection included
 
-## Technology Stack
+## Tech Stack
 
-- **Framework**: Laravel 13
-- **PHP**: 8.3
-- **Database**: MySQL 8.0
-- **Authentication**: Laravel Sanctum
-- **Queue**: Database driver
-- **Task Scheduling**: Laravel Scheduler
-- **Testing**: Pest
-- **Containerization**: Docker & Docker Compose
+| Layer | Technology |
+|---|---|
+| Framework | Laravel 13 (PHP 8.3) |
+| Database | MySQL 8.0 |
+| Auth | Laravel Sanctum |
+| Queue | Database driver |
+| Scheduling | Laravel Scheduler |
+| Testing | Pest |
+| Containerization | Docker & Docker Compose |
 
-## Project Architecture
+## Architecture
 
-### Domain Models
-- **Users**: Application users with authentication
-- **Projects**: User-owned projects with status tracking (Active, Completed, Archived)
-- **Tasks**: Project tasks with priorities (Low, Medium, High) and statuses (Todo, In Progress, Done)
+**Patterns:** Repository Pattern · Service Layer · API Resources · Policy-Based Authorization · Observer Pattern · Enums for statuses/priorities
 
-### Architecture Patterns
-- **Repository Pattern**: Abstraction layer for data access
-- **Service Layer**: Business logic encapsulation
-- **Resource Pattern**: API response transformation
-- **Policy-Based Authorization**: Laravel policies for access control
-- **Observer Pattern**: Event-driven notifications
-- **Enum Pattern**: Type-safe status and priority values
+**Domain models:**
+- **Users** — application users with authentication
+- **Projects** — user-owned, with status (Active / Completed / Archived)
+- **Tasks** — project-scoped, with priority (Low / Medium / High) and status (Todo / In Progress / Done)
 
-### Key Components
-- Eloquent ORM with relationships
-- Custom exception handling
-- API response standardization via traits
-- Database seeding with factories
-- **Automated overdue task detection via scheduled command**
-- **Queue-based email notifications**
-- **One-time notification per task (tracked via overdue_notified_at)**
-- Soft delete cascade on project deletion
+**Key components:**
+- `NotifyOverdueTasks` command → `SendTaskOverdueNotificationJob` (queued) → `TaskOverdueNotification`
+- `readyForOverdueNotification()` scope filters eligible tasks
+- `overdue_notified_at` ensures each task is notified only once
 
-## Installation
+```
+app/
+├── Console/Commands/       # NotifyOverdueTasks
+├── Enums/
+├── Http/Controllers/Api/V1/
+├── Jobs/                   # SendTaskOverdueNotificationJob
+├── Models/
+├── Notifications/          # TaskOverdueNotification
+├── Observers/               # ProjectObserver
+├── Policies/
+├── Repositories/{Contracts,Eloquent}/
+└── Services/
 
-### Prerequisites
-- Docker Desktop installed and running
-- Git
+database/{factories,migrations,seeders}/
+routes/{api.php,console.php}
+tests/{Feature,Unit}/
+```
 
-### Setup Steps
+## Getting Started
 
-1. **Clone the repository**
+**Prerequisites:** Docker Desktop, Git
+
 ```bash
 git clone <repository-url>
 cd task_management_system
-```
-
-2. **Environment Setup**
-```bash
-copy .env.example .env
-```
-> **Important**: Copy `.env.example` to `.env` before starting. The file contains all necessary configuration for Docker services (MySQL, Mailpit, etc.).
-
-3. **Start Docker containers**
-```bash
+cp .env.example .env
 docker compose up -d --build
 ```
 
-This single command automatically:
-- ✅ Builds and starts all Docker containers (app, mysql, queue, scheduler, mailpit, phpmyadmin)
-- ✅ Installs Composer dependencies
-- ✅ Generates application key
-- ✅ Runs database migrations
-- ✅ Seeds the database with sample data
+That single command builds all containers, installs dependencies, generates the app key, runs migrations, and seeds the database. No manual steps required.
 
-**That's it!** Everything is automated. No manual commands needed.
+### Access Points
 
-## Access Points
+| Service | URL | Credentials |
+|---|---|---|
+| API | http://localhost:8000 | — |
+| phpMyAdmin | http://localhost:8080 | root / root |
+| Mailpit (email testing) | http://localhost:8025 | — |
+| MySQL | localhost:3306 | root / root |
 
-- **API Base URL**: http://localhost:8000
-- **phpMyAdmin**: http://localhost:8080 (user: root, password: root)
-- **Mailpit Web UI**: http://localhost:8025
-- **MySQL**: localhost:3306 (user: root, password: root)
+### Docker Services
 
-## Docker Services
-
-The application runs 6 separate Docker containers:
-
-1. **app** - Laravel application (port 8000)
-2. **mysql** - MySQL 8.0 database (port 3306)
-3. **phpmyadmin** - Database management UI (port 8080)
-4. **queue** - Queue worker processing background jobs
-5. **scheduler** - Task scheduler running every minute
-6. **mailpit** - Email testing tool (SMTP: 1025, Web UI: 8025)
-
-All services start automatically with `docker compose up`. No manual intervention required.
+| Container | Purpose |
+|---|---|
+| `app` | Laravel application (port 8000) |
+| `mysql` | MySQL 8.0 database |
+| `phpmyadmin` | Database management UI |
+| `queue` | Background job worker |
+| `scheduler` | Runs the task scheduler every minute |
+| `mailpit` | Captures outgoing email for testing |
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/v1/register` - Register new user
-- `POST /api/v1/login` - Login user
-- `POST /api/v1/logout` - Logout user (requires authentication)
+**Auth**
+```
+POST /api/v1/register
+POST /api/v1/login
+POST /api/v1/logout          (auth required)
+```
 
-### Dashboard
-- `GET /api/v1/dashboard` - Get dashboard statistics (requires authentication)
+**Dashboard**
+```
+GET /api/v1/dashboard         (auth required)
+```
 
-### Projects
-- `GET /api/v1/projects` - List all projects (paginated)
-- `GET /api/v1/projects/statuses` - Get available project statuses
-- `POST /api/v1/projects` - Create new project
-- `GET /api/v1/projects/{id}` - Get single project
-- `PUT /api/v1/projects/{id}` - Update project
-- `DELETE /api/v1/projects/{id}` - Delete project (soft delete)
+**Projects**
+```
+GET    /api/v1/projects
+GET    /api/v1/projects/statuses
+POST   /api/v1/projects
+GET    /api/v1/projects/{id}
+PUT    /api/v1/projects/{id}
+DELETE /api/v1/projects/{id}   (soft delete)
+```
 
-### Tasks
-- `GET /api/v1/projects/{project}/tasks` - List project tasks (paginated)
-- `GET /api/v1/tasks/priorities` - Get available task priorities
-- `GET /api/v1/tasks/statuses` - Get available task statuses
-- `POST /api/v1/projects/{project}/tasks` - Create new task
-- `GET /api/v1/tasks/{id}` - Get single task
-- `PUT /api/v1/tasks/{id}` - Update task
-- `DELETE /api/v1/tasks/{id}` - Delete task (soft delete)
+**Tasks**
+```
+GET    /api/v1/projects/{project}/tasks
+GET    /api/v1/tasks/priorities
+GET    /api/v1/tasks/statuses
+POST   /api/v1/projects/{project}/tasks
+GET    /api/v1/tasks/{id}
+PUT    /api/v1/tasks/{id}
+DELETE /api/v1/tasks/{id}       (soft delete)
+```
 
-### Query Parameters for Tasks
-- `status`: Filter by status (todo, in_progress, done)
-- `priority`: Filter by priority (low, medium, high)
-- `search`: Search by title
+Query params for tasks: `status` (todo / in_progress / done), `priority` (low / medium / high), `search`.
 
-## API Documentation
-
-Use the included **Postman collection** for complete API documentation:
-
-1. Import `Task Management API.postman_collection.json` into Postman
-2. Import `Task Management API.postman_environment.json` for environment variables
-3. Start with the Authentication folder to get your API token
-4. The token is automatically saved for subsequent requests
+**Full docs:** import `Task Management API.postman_collection.json` and `.postman_environment.json` into Postman. Start with the Authentication folder — the token is saved automatically for subsequent requests.
 
 ## Testing
 
-### Run all tests
 ```bash
 docker compose exec app php artisan test
-```
-
-### Run specific test suite
-```bash
 docker compose exec app php artisan test --filter AuthenticationTest
 docker compose exec app php artisan test --filter ProjectTest
 docker compose exec app php artisan test --filter TaskTest
 docker compose exec app php artisan test --filter DashboardTest
 ```
 
-### Test Coverage
-- Authentication tests (register, login, logout)
-- Project CRUD tests with authorization
-- Task CRUD tests with filtering
-- Dashboard statistics tests
-- Validation and error handling tests
+Covers authentication, project/task CRUD with authorization, filtering, dashboard stats, and validation/error handling.
 
 ## Database Seeding
 
-The application includes comprehensive seeders:
+Seeded automatically on first `docker compose up`. To reseed manually:
 
 ```bash
 docker compose exec app php artisan db:seed
 ```
 
-This creates:
-- 3 users (admin@example.com, test@example.com, demo@example.com)
-- 3-5 projects per user
-- 5-10 tasks per project with varied statuses and priorities
-- Includes overdue, completed, and pending tasks
-
-Default password for seeded users: `password`
-
-## Mail Testing
-
-The application uses **Mailpit** for email testing during development and technical assessments.
-
-### What is Mailpit?
-Mailpit is a lightweight email testing tool that captures all outgoing emails without sending them to real recipients. This means:
-- ✅ No SMTP credentials required
-- ✅ All emails are captured locally
-- ✅ Safe for development and testing
-- ✅ Professional email preview interface
-
-### How to Use
-
-1. **Start the application**
-```bash
-docker compose up -d --build
-```
-
-2. **Open Mailpit Web UI**
-Navigate to: **http://localhost:8025**
-
-3. **Trigger email notifications**
-- Create an overdue task (set `due_date` to a past date)
-- Wait for the scheduler (runs daily at 00:05) or trigger manually:
-```bash
-docker compose exec app php artisan tasks:notify-overdue
-```
-
-4. **View emails in Mailpit**
-- All outgoing emails appear in the Mailpit web interface
-- View HTML and plain text versions
-- Inspect email headers and content
-- No emails are sent to actual recipients
-
-### Configuration
-The application is pre-configured to use Mailpit:
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=mailpit
-MAIL_PORT=1025
-MAIL_ENCRYPTION=null
-```
-
-### Production Deployment
-For production, update `.env` with real SMTP credentials:
-```env
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.your-provider.com
-MAIL_PORT=587
-MAIL_ENCRYPTION=tls
-MAIL_USERNAME=your-username
-MAIL_PASSWORD=your-password
-```
+Creates 3 users (`admin@example.com`, `test@example.com`, `demo@example.com` — password: `password`), 3–5 projects each, and 5–10 tasks per project with varied statuses, priorities, and overdue dates.
 
 ## Overdue Task Notifications
 
-The system automatically sends email notifications for overdue tasks:
+**How it works:**
+1. Scheduler runs daily at `09:05`
+2. Finds tasks where `due_date` is past, `status` ≠ Done, and `overdue_notified_at` is `NULL`
+3. Sends an email to the project owner via a queued job
+4. Sets `overdue_notified_at` to prevent duplicate notifications
 
-### How It Works
-1. **Scheduler**: Runs daily at 09:05 (9:05 AM)
-2. **Detection**: Identifies tasks where:
-   - `due_date` is before today
-   - `status` is NOT "Done"
-   - `overdue_notified_at` is NULL (not yet notified)
-3. **Notification**: Sends professional email to project owner
-4. **Tracking**: Sets `overdue_notified_at` to prevent duplicate notifications
-
-### One-Time Notification
-Each task receives the overdue notification **only once**. Even if a task remains overdue for weeks, no additional emails are sent unless `overdue_notified_at` is manually reset to NULL.
-
-### Manual Testing
-To manually trigger the overdue notification check:
+**Manual trigger:**
 ```bash
 docker compose exec app php artisan tasks:notify-overdue
 ```
 
-### **Testing with Mailpit - Quick Email Testing**
+**Testing with Mailpit:** open http://localhost:8025, create a task with a past `due_date`, then run the command above. All emails are captured locally — nothing is sent to real addresses.
 
-> **💡 For rapid testing of email notifications**, you can temporarily change the schedule frequency in `routes/console.php`:
+To speed up testing, `routes/console.php` supports switching the schedule to `->everyMinute()` temporarily; always revert to `->dailyAt('09:05')` before committing.
 
-**Production schedule (default):**
-```php
-Schedule::command('tasks:notify-overdue')
-    ->dailyAt('09:05')
-    // ->everyMinute()  // only for mailpit testing
-    ->withoutOverlapping();
-```
+## Useful Commands
 
-**For testing (uncomment `everyMinute()`):**
-```php
-Schedule::command('tasks:notify-overdue')
-    // ->dailyAt('09:05')
-    ->everyMinute()  // only for mailpit testing
-    ->withoutOverlapping();
-```
-
-⚠️ **Important**: 
-- Change it to `->everyMinute()` only for testing email notifications in Mailpit
-- **Always revert back** to `->dailyAt('09:05')` after testing
-- The scheduler runs automatically in the `scheduler` Docker container
-
-### Architecture
-- **Command**: `tasks:notify-overdue` (app/Console/Commands/NotifyOverdueTasks.php)
-- **Job**: `SendTaskOverdueNotificationJob` (queued, processes in background)
-- **Notification**: `TaskOverdueNotification` (Laravel Mail notification)
-- **Scope**: `readyForOverdueNotification()` (filters eligible tasks)
-
-## Queue Workers & Scheduler
-
-### Automatic Background Processing
-When you run `docker compose up`, the following services start automatically:
-
-**Queue Worker** (container: `laravel_queue`)
-- Processes background jobs (email notifications, etc.)
-- Command: `php artisan queue:work`
-- Runs continuously
-- Auto-restarts on failure
-
-**Scheduler** (container: `laravel_scheduler`)
-- Executes scheduled tasks every minute
-- Command: `php artisan schedule:run`
-- Runs the overdue notification check daily at 00:05
-
-**No manual commands required!** Both queue worker and scheduler run automatically in dedicated containers.
-
-### Monitoring
-View queue worker logs:
 ```bash
-docker compose logs -f queue
-```
-
-View scheduler logs:
-```bash
-docker compose logs -f scheduler
-```
-
-## Development Commands
-
-### Clear caches
-```bash
-docker compose exec app php artisan cache:clear
-docker compose exec app php artisan config:clear
-docker compose exec app php artisan route:clear
-```
-
-### Generate IDE helper files
-```bash
-docker compose exec app composer require --dev barryvdh/laravel-ide-helper
-docker compose exec app php artisan ide-helper:generate
-docker compose exec app php artisan ide-helper:models
-```
-
-### Code formatting
-```bash
-docker compose exec app ./vendor/bin/pint
-```
-
-## Docker Management
-
-### View logs
-```bash
+# Logs
 docker compose logs -f app
-```
+docker compose logs -f queue
+docker compose logs -f scheduler
 
-### Access container shell
-```bash
+# Shell access
 docker compose exec app bash
-```
 
-### Stop containers
-```bash
+# Cache
+docker compose exec app php artisan optimize:clear
+
+# Code style
+docker compose exec app ./vendor/bin/pint
+
+# Stop / rebuild
 docker compose down
-```
-
-### Rebuild containers
-```bash
 docker compose up -d --build
 ```
 
-## Project Structure
+## Response Format
 
-```
-app/
-├── Console/
-│   └── Commands/            # Artisan commands (NotifyOverdueTasks)
-├── Enums/                   # PHP 8 enum classes
-├── Exceptions/              # Custom exceptions
-├── Http/
-│   ├── Controllers/
-│   │   └── Api/V1/         # API controllers
-│   ├── Requests/           # Form request validators
-│   ├── Resources/          # API resources
-│   └── Traits/             # Reusable traits (ApiResponse)
-├── Jobs/                   # Queue jobs (SendTaskOverdueNotificationJob)
-├── Mail/                   # Mailable classes (legacy, not used)
-├── Models/                 # Eloquent models
-├── Notifications/          # Notification classes (TaskOverdueNotification)
-├── Observers/              # Eloquent observers (ProjectObserver only)
-├── Policies/               # Authorization policies
-├── Providers/              # Service providers
-├── Repositories/
-│   ├── Contracts/         # Repository interfaces
-│   └── Eloquent/          # Repository implementations
-└── Services/               # Business logic services
-
-database/
-├── factories/              # Model factories
-├── migrations/             # Database migrations
-└── seeders/                # Database seeders
-
-routes/
-├── api.php                 # API routes
-└── console.php             # Scheduled tasks registration
-
-tests/
-├── Feature/
-│   ├── Api/V1/            # API feature tests
-│   └── Auth/              # Authentication tests
-└── Unit/                   # Unit tests
-```
-
-## API Response Format
-
-### Success Response
 ```json
-{
-    "success": true,
-    "message": "Operation successful",
-    "data": { }
-}
-```
+// Success
+{ "success": true, "message": "Operation successful", "data": {} }
 
-### Error Response
-```json
-{
-    "success": false,
-    "message": "Error message",
-    "errors": { }
-}
-```
+// Error
+{ "success": false, "message": "Error message", "errors": {} }
 
-### Paginated Response
-```json
+// Paginated
 {
-    "success": true,
-    "message": "Data retrieved successfully",
-    "data": {
-        "data": [],
-        "links": {
-            "first": "...",
-            "last": "...",
-            "prev": null,
-            "next": "..."
-        },
-        "meta": {
-            "current_page": 1,
-            "from": 1,
-            "last_page": 5,
-            "per_page": 15,
-            "to": 15,
-            "total": 65
-        }
-    }
+  "success": true,
+  "message": "Data retrieved successfully",
+  "data": {
+    "data": [],
+    "links": { "first": "...", "last": "...", "prev": null, "next": "..." },
+    "meta": { "current_page": 1, "from": 1, "last_page": 5, "per_page": 15, "to": 15, "total": 65 }
+  }
 }
 ```
 
 ## Environment Variables
 
-Key environment variables (see `.env.example` for complete list):
+See `.env.example` for the full list. Key defaults:
 
 ```env
-APP_NAME=Laravel
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
 DB_CONNECTION=mysql
 DB_HOST=mysql
-DB_PORT=3306
 DB_DATABASE=task_management_db
 DB_USERNAME=root
 DB_PASSWORD=root
@@ -470,24 +230,17 @@ DB_PASSWORD=root
 QUEUE_CONNECTION=database
 CACHE_STORE=database
 
-MAIL_MAILER=log
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
 ```
 
-## Security Features
+For production, replace the `MAIL_*` block with real SMTP credentials.
 
-- Token-based authentication (Laravel Sanctum)
-- Password hashing with bcrypt
-- Policy-based authorization
-- Input validation
-- SQL injection protection via Eloquent ORM
-- XSS protection
-- CSRF protection
-- Rate limiting
+## Security
+
+Sanctum token auth · bcrypt password hashing · policy-based authorization · input validation · Eloquent ORM (SQL injection protection) · XSS/CSRF protection · rate limiting
 
 ## License
 
-This project is open-sourced software licensed under the MIT license.
-
-## Support
-
-For issues or questions, please open an issue in the repository.
+MIT
