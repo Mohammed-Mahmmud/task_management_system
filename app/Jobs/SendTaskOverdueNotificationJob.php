@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Mail\TaskOverdueMail;
 use App\Models\Task;
 use App\Notifications\TaskOverdueNotification;
 use Illuminate\Bus\Queueable;
@@ -10,7 +9,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Mail;
 
 class SendTaskOverdueNotificationJob implements ShouldQueue
 {
@@ -24,8 +22,10 @@ class SendTaskOverdueNotificationJob implements ShouldQueue
     {
         $user = $this->task->project->user;
 
-        Mail::to($user->email)->send(new TaskOverdueMail($this->task));
-
         $user->notify(new TaskOverdueNotification($this->task));
+
+        $this->task->update([
+            'overdue_notified_at' => now(),
+        ]);
     }
 }

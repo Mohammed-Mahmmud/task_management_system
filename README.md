@@ -9,11 +9,11 @@ A professional RESTful API built with Laravel 13 for managing projects and tasks
 - **Task Management**: Comprehensive task management with priorities, statuses, and due dates
 - **Dashboard**: Aggregate statistics and metrics
 - **Filtering & Search**: Advanced filtering by status, priority, and search by title
-- **Notifications**: Email and database notifications for overdue tasks
+- **Automated Overdue Notifications**: Time-based email notifications for overdue tasks
 - **Soft Deletes**: Soft delete support for projects and tasks
 - **API Documentation**: Complete Postman collection included
 - **Testing**: Comprehensive Pest test suite
-- **Docker Support**: Fully containerized with Docker Compose
+- **Docker Support**: Fully containerized with Docker Compose (app, queue worker, scheduler)
 
 ## Technology Stack
 
@@ -22,6 +22,7 @@ A professional RESTful API built with Laravel 13 for managing projects and tasks
 - **Database**: MySQL 8.0
 - **Authentication**: Laravel Sanctum
 - **Queue**: Database driver
+- **Task Scheduling**: Laravel Scheduler
 - **Testing**: Pest
 - **Containerization**: Docker & Docker Compose
 
@@ -45,8 +46,9 @@ A professional RESTful API built with Laravel 13 for managing projects and tasks
 - Custom exception handling
 - API response standardization via traits
 - Database seeding with factories
-- Email notifications for overdue tasks
-- Database notifications
+- **Automated overdue task detection via scheduled command**
+- **Queue-based email notifications**
+- **One-time notification per task (tracked via overdue_notified_at)**
 - Soft delete cascade on project deletion
 
 ## Installation
@@ -73,6 +75,15 @@ copy .env.docker .env
 docker compose up -d --build
 ```
 
+This single command starts all required services:
+- **app**: Laravel application server
+- **mysql**: Database server
+- **phpmyadmin**: Database management interface
+- **queue**: Background queue worker for processing jobs
+- **scheduler**: Task scheduler that runs every minute
+
+**No manual queue or scheduler commands are needed!** Everything runs automatically.
+
 4. **Install dependencies**
 ```bash
 docker compose exec app composer install
@@ -96,8 +107,22 @@ docker compose exec app php artisan db:seed
 ## Access Points
 
 - **API Base URL**: http://localhost:8000
-- **phpMyAdmin**: http://localhost:8080 (user: root, password: root_password)
-- **MySQL**: localhost:3306 (user: laravel_user, password: laravel_password)
+- **phpMyAdmin**: http://localhost:8080 (user: root, password: root)
+- **Mailpit Web UI**: http://localhost:8025
+- **MySQL**: localhost:3306 (user: root, password: root)
+
+## Docker Services
+
+The application runs 6 separate Docker containers:
+
+1. **app** - Laravel application (port 8000)
+2. **mysql** - MySQL 8.0 database (port 3306)
+3. **phpmyadmin** - Database management UI (port 8080)
+4. **queue** - Queue worker processing background jobs
+5. **scheduler** - Task scheduler running every minute
+6. **mailpit** - Email testing tool (SMTP: 1025, Web UI: 8025)
+
+All services start automatically with `docker compose up`. No manual intervention required.
 
 ## API Endpoints
 
@@ -111,6 +136,7 @@ docker compose exec app php artisan db:seed
 
 ### Projects
 - `GET /api/v1/projects` - List all projects (paginated)
+- `GET /api/v1/projects/statuses` - Get available project statuses
 - `POST /api/v1/projects` - Create new project
 - `GET /api/v1/projects/{id}` - Get single project
 - `PUT /api/v1/projects/{id}` - Update project
@@ -118,6 +144,8 @@ docker compose exec app php artisan db:seed
 
 ### Tasks
 - `GET /api/v1/projects/{project}/tasks` - List project tasks (paginated)
+- `GET /api/v1/tasks/priorities` - Get available task priorities
+- `GET /api/v1/tasks/statuses` - Get available task statuses
 - `POST /api/v1/projects/{project}/tasks` - Create new task
 - `GET /api/v1/tasks/{id}` - Get single task
 - `PUT /api/v1/tasks/{id}` - Update task
@@ -175,18 +203,115 @@ This creates:
 
 Default password for seeded users: `password`
 
-## Queue Workers
+## Mail Testing
 
-For processing email notifications:
+The application uses **Mailpit** for email testing during development and technical assessments.
 
+### What is Mailpit?
+Mailpit is a lightweight email testing tool that captures all outgoing emails without sending them to real recipients. This means:
+- ✅ No SMTP credentials required
+- ✅ All emails are captured locally
+- ✅ Safe for development and testing
+- ✅ Professional email preview interface
+
+### How to Use
+
+1. **Start the application**
 ```bash
-docker compose exec app php artisan queue:work
+docker compose up -d --build
 ```
 
-Or use the `--daemon` flag for production:
+2. **Open Mailpit Web UI**
+Navigate to: **http://localhost:8025**
 
+3. **Trigger email notifications**
+- Create an overdue task (set `due_date` to a past date)
+- Wait for the scheduler (runs daily at 00:05) or trigger manually:
 ```bash
-docker compose exec app php artisan queue:work --daemon
+docker compose exec app php artisan tasks:notify-overdue
+```
+
+4. **View emails in Mailpit**
+- All outgoing emails appear in the Mailpit web interface
+- View HTML and plain text versions
+- Inspect email headers and content
+- No emails are sent to actual recipients
+
+### Configuration
+The application is pre-configured to use Mailpit:
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_ENCRYPTION=null
+```
+
+### Production Deployment
+For production, update `.env` with real SMTP credentials:
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.your-provider.com
+MAIL_PORT=587
+MAIL_ENCRYPTION=tls
+MAIL_USERNAME=your-username
+MAIL_PASSWORD=your-password
+```
+
+## Overdue Task Notifications
+
+The system automatically sends email notifications for overdue tasks:
+
+### How It Works
+1. **Scheduler**: Runs daily at 00:05 (5 minutes after midnight)
+2. **Detection**: Identifies tasks where:
+   - `due_date` is before today
+   - `status` is NOT "Done"
+   - `overdue_notified_at` is NULL (not yet notified)
+3. **Notification**: Sends professional email to project owner
+4. **Tracking**: Sets `overdue_notified_at` to prevent duplicate notifications
+
+### One-Time Notification
+Each task receives the overdue notification **only once**. Even if a task remains overdue for weeks, no additional emails are sent unless `overdue_notified_at` is manually reset to NULL.
+
+### Manual Testing
+To manually trigger the overdue notification check:
+```bash
+docker compose exec app php artisan tasks:notify-overdue
+```
+
+### Architecture
+- **Command**: `tasks:notify-overdue` (app/Console/Commands/NotifyOverdueTasks.php)
+- **Job**: `SendTaskOverdueNotificationJob` (queued, processes in background)
+- **Notification**: `TaskOverdueNotification` (Laravel Mail notification)
+- **Scope**: `readyForOverdueNotification()` (filters eligible tasks)
+
+## Queue Workers & Scheduler
+
+### Automatic Background Processing
+When you run `docker compose up`, the following services start automatically:
+
+**Queue Worker** (container: `laravel_queue`)
+- Processes background jobs (email notifications, etc.)
+- Command: `php artisan queue:work`
+- Runs continuously
+- Auto-restarts on failure
+
+**Scheduler** (container: `laravel_scheduler`)
+- Executes scheduled tasks every minute
+- Command: `php artisan schedule:run`
+- Runs the overdue notification check daily at 00:05
+
+**No manual commands required!** Both queue worker and scheduler run automatically in dedicated containers.
+
+### Monitoring
+View queue worker logs:
+```bash
+docker compose logs -f queue
+```
+
+View scheduler logs:
+```bash
+docker compose logs -f scheduler
 ```
 
 ## Development Commands
@@ -236,36 +361,42 @@ docker compose up -d --build
 
 ```
 app/
-├── Enums/                    # PHP 8 enum classes
-├── Exceptions/               # Custom exceptions
+├── Console/
+│   └── Commands/            # Artisan commands (NotifyOverdueTasks)
+├── Enums/                   # PHP 8 enum classes
+├── Exceptions/              # Custom exceptions
 ├── Http/
 │   ├── Controllers/
-│   │   └── Api/V1/          # API controllers
-│   ├── Requests/            # Form request validators
-│   ├── Resources/           # API resources
-│   └── Traits/              # Reusable traits (ApiResponse)
-├── Jobs/                    # Queue jobs
-├── Mail/                    # Mailable classes
-├── Models/                  # Eloquent models
-├── Notifications/           # Notification classes
-├── Observers/               # Eloquent observers
-├── Policies/                # Authorization policies
-├── Providers/               # Service providers
+│   │   └── Api/V1/         # API controllers
+│   ├── Requests/           # Form request validators
+│   ├── Resources/          # API resources
+│   └── Traits/             # Reusable traits (ApiResponse)
+├── Jobs/                   # Queue jobs (SendTaskOverdueNotificationJob)
+├── Mail/                   # Mailable classes (legacy, not used)
+├── Models/                 # Eloquent models
+├── Notifications/          # Notification classes (TaskOverdueNotification)
+├── Observers/              # Eloquent observers (ProjectObserver only)
+├── Policies/               # Authorization policies
+├── Providers/              # Service providers
 ├── Repositories/
-│   ├── Contracts/          # Repository interfaces
-│   └── Eloquent/           # Repository implementations
-└── Services/                # Business logic services
+│   ├── Contracts/         # Repository interfaces
+│   └── Eloquent/          # Repository implementations
+└── Services/               # Business logic services
 
 database/
-├── factories/               # Model factories
-├── migrations/              # Database migrations
-└── seeders/                 # Database seeders
+├── factories/              # Model factories
+├── migrations/             # Database migrations
+└── seeders/                # Database seeders
+
+routes/
+├── api.php                 # API routes
+└── console.php             # Scheduled tasks registration
 
 tests/
 ├── Feature/
-│   ├── Api/V1/             # API feature tests
-│   └── Auth/               # Authentication tests
-└── Unit/                    # Unit tests
+│   ├── Api/V1/            # API feature tests
+│   └── Auth/              # Authentication tests
+└── Unit/                   # Unit tests
 ```
 
 ## API Response Format

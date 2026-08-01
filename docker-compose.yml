@@ -25,17 +25,15 @@ services:
         cp .env.example .env;
       fi;
 
-      composer install --no-interaction --prefer-dist --optimize-autoloader;
+      composer install --no-interaction --prefer-dist --optimize-autoloader --no-progress || exit 1;
 
       if ! grep -q '^APP_KEY=base64:' .env; then
         php artisan key:generate --force;
       fi;
 
-      php artisan migrate --seed --force;
+      php artisan migrate --seed --force || exit 1;
 
-      php artisan storage:link || true;
-
-      php artisan optimize:clear;
+      php artisan optimize:clear || exit 1;
 
       php artisan serve --host=0.0.0.0 --port=8000;
       "
@@ -54,7 +52,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
 
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot_password", "--ssl-mode=DISABLED"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot", "--ssl-mode=DISABLED"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -78,7 +76,7 @@ services:
       PMA_HOST: mysql
       PMA_PORT: 3306
       PMA_USER: root
-      PMA_PASSWORD: root_password
+      PMA_PASSWORD: root
 
     depends_on:
       mysql:
@@ -86,6 +84,84 @@ services:
 
     ports:
       - "8080:80"
+
+    networks:
+      - laravel_network
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: laravel_queue
+    restart: unless-stopped
+    working_dir: /var/www
+
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+
+    depends_on:
+      app:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+
+    command: >
+      sh -c "
+      until php artisan about >/dev/null 2>&1; do
+        sleep 2;
+      done;
+
+      php artisan queue:work database --queue=default --sleep=3 --tries=3 --max-time=3600 --no-interaction;
+      "
+
+    networks:
+      - laravel_network
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: laravel_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+
+    depends_on:
+      app:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+
+    command: >
+      sh -c "
+      until php artisan about >/dev/null 2>&1; do
+        sleep 2;
+      done;
+
+      while true; do
+        php artisan schedule:run --verbose --no-interaction;
+        sleep 60;
+      done;
+      "
+
+    networks:
+      - laravel_network
+
+  mailpit:
+    image: axllent/mailpit:latest
+
+    container_name: laravel_mailpit
+    restart: unless-stopped
+
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
     networks:
       - laravel_network
