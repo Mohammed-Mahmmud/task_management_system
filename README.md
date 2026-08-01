@@ -130,17 +130,32 @@ Query params for tasks: `status` (todo / in_progress / done), `priority` (low / 
 
 ## API Documentation
 
-Complete API documentation is available via **Swagger/OpenAPI**:
+Complete interactive API documentation is available via **Swagger/OpenAPI**:
 
-**Access the interactive API documentation:**
-- **Swagger UI**: http://localhost:8000/api/documentation
+**📚 Access Swagger UI:** http://localhost:8000/api/documentation
 
 ### Features:
-- ✅ Interactive API explorer - test endpoints directly from your browser
-- ✅ Complete request/response examples
-- ✅ Authentication flow included
-- ✅ Auto-generated from code annotations
-- ✅ No Postman required
+- ✅ **Interactive API Explorer** - Test all endpoints directly from your browser
+- ✅ **Authentication Support** - Use the "Authorize" button to set your Bearer token
+- ✅ **Complete Request/Response Examples** - See exactly what to send and expect
+- ✅ **Auto-Generated** - Documentation stays in sync with code
+
+### Quick Start:
+1. Open http://localhost:8000/api/documentation
+2. Click **"Authorize"** button (🔒 icon at top right)
+3. Enter: `Bearer {your-token}` (get token from `/api/v1/login` endpoint)
+4. Click **"Authorize"** then **"Close"**
+5. Try any endpoint by clicking **"Try it out"**
+
+### Getting Your Token:
+```bash
+# Login first
+curl -X POST http://localhost:8000/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"password"}'
+
+# Copy the token from the response and use it in Swagger UI
+```
 
 ## Testing
 
